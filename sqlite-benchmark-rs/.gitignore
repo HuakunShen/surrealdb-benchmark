@@ -1,0 +1,7 @@
+/target
+*.db
+*.csv
+*.tsv
+*.surrealdb*
+cmake-build-debug
+cmake-build-release

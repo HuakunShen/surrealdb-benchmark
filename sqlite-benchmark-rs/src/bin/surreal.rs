@@ -60,7 +60,10 @@ async fn main() -> Result<()> {
     // let mut batch: Vec<NameBasic> = Vec::with_capacity(row_count);
     println!("Processing records...");
 
-    let tx = db.transaction().await?;
+    // Use query-based transactions instead of a transaction method
+    // Begin transaction
+    db.query("BEGIN TRANSACTION").await?;
+    
     // Process each record
     for result in rdr.records() {
         if count > 1000000 {
@@ -87,22 +90,20 @@ async fn main() -> Result<()> {
             known_for_titles: record[5].to_string(),
         };
 
-        // Insert using the nconst as the record ID
-        // let created: Option<NameBasic> = db.create("name_basic").content(name).await?;
-        // batch.push(name);
-        (&tx)
-            .create::<Option<NameBasic>>("name_basic")
-            .content(name)
+        // Insert using query with bind parameters
+        db.query("CREATE name_basic CONTENT $content")
+            .bind(("content", name))
             .await?;
+            
         count += 1;
         if count % 100_000 == 0 {
             println!("Processed {} NameBasics", count);
         }
     }
 
-    // Single transaction at the end
-    println!("Starting database insert...");
-    // tx.commit().await?;
+    // Commit the transaction
+    println!("Starting database commit...");
+    db.query("COMMIT TRANSACTION").await?;
 
     let duration = start.elapsed();
     println!("Successfully imported {} records in {:?}", count, duration);
